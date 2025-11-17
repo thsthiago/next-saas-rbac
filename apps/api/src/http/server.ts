@@ -1,4 +1,5 @@
 import fastifyCors from "@fastify/cors"
+import fastifyJwt from "@fastify/jwt"
 import fastifySwagger from "@fastify/swagger"
 import fastifySwaggerUi from "@fastify/swagger-ui"
 import { fastify } from "fastify"
@@ -8,40 +9,105 @@ import {
   validatorCompiler,
   ZodTypeProvider
 } from "fastify-type-provider-zod"
-import { createAccount } from "./routes/auth/create-account"
 
-const PORT = 3333
+import { env } from "@saas/env"
+import { errorHandler } from "./error-handler"
+import { authenticationWithGithub } from "./routes/auth/authentication-with-github"
+import { authenticationWithPassword } from "./routes/auth/authentication-with-password"
+import { createAccount } from "./routes/auth/create-account"
+import { getProfile } from "./routes/auth/get-profile"
+import { requestPasswordRecover } from "./routes/auth/request-password-recover"
+import { resetPassword } from "./routes/auth/reset-password"
+import { getOrgationzationBilling } from "./routes/billing/get-organization-billing"
+import { acceptInvite } from "./routes/invites/accept-invite"
+import { createInvite } from "./routes/invites/create-invite"
+import { getInvite } from "./routes/invites/get-invite"
+import { getInvites } from "./routes/invites/get-invites"
+import { getPendingInvites } from "./routes/invites/get-pendings-invites"
+import { rejectInvite } from "./routes/invites/reject-invite"
+import { revokeInvite } from "./routes/invites/revoke-invite"
+import { getMembers } from "./routes/members/get-members"
+import { removeMember } from "./routes/members/remove-member"
+import { updateMember } from "./routes/members/update-member"
+import { createOrganization } from "./routes/orgs/create-organization"
+import { getMembeship } from "./routes/orgs/get-membership"
+import { getOrgationzation } from "./routes/orgs/get-organization"
+import { getOrgationzations } from "./routes/orgs/get-organizations"
+import { shutdownOrganization } from "./routes/orgs/shutdown-organization"
+import { transferOrganization } from "./routes/orgs/transfer-organization"
+import { updateOrganization } from "./routes/orgs/update-organization"
+import { createProject } from "./routes/projects/create-project"
+import { deleteProject } from "./routes/projects/delete-project"
+import { getProject } from "./routes/projects/get-project"
+import { getProjects } from "./routes/projects/get-projects"
+import { updateProject } from "./routes/projects/update-project"
 
 const app = fastify().withTypeProvider<ZodTypeProvider>()
 
 app.setSerializerCompiler(serializerCompiler)
 app.setValidatorCompiler(validatorCompiler)
 
+app.setErrorHandler(errorHandler)
+
 app.register(fastifySwagger, {
   openapi: {
-    openapi: "3.0.0",
     info: {
       title: "Nest.js Saas",
       description: "Fullstask Saas app with multi-tenancy and RBAC",
       version: "0.0.1"
     },
-    servers: [],
-    tags: [
-      { name: "user", description: "User related end-points" },
-      { name: "code", description: "Code related end-points" }
-    ]
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT"
+        }
+      }
+    }
   },
   transform: jsonSchemaTransform
 })
 
-app.register(fastifySwaggerUi, {
-  routePrefix: "/docs"
-})
-
+app.register(fastifySwaggerUi, { routePrefix: "/docs" })
+app.register(fastifyJwt, { secret: env.JWT_SECRET })
 app.register(fastifyCors)
 
 app.register(createAccount)
+app.register(authenticationWithPassword)
+app.register(authenticationWithGithub)
+app.register(getProfile)
+app.register(requestPasswordRecover)
+app.register(resetPassword)
 
-app.listen({ port: PORT }).then(() => {
-  console.log("HTTP server running!")
+app.register(createOrganization)
+app.register(getMembeship)
+app.register(getOrgationzations)
+app.register(getOrgationzation)
+app.register(updateOrganization)
+app.register(shutdownOrganization)
+app.register(transferOrganization)
+
+app.register(createProject)
+app.register(deleteProject)
+app.register(getProject)
+app.register(getProjects)
+app.register(updateProject)
+
+app.register(getMembers)
+app.register(updateMember)
+app.register(removeMember)
+
+app.register(createInvite)
+app.register(getInvite)
+app.register(getInvites)
+app.register(acceptInvite)
+app.register(rejectInvite)
+app.register(revokeInvite)
+app.register(getPendingInvites)
+
+app.register(getOrgationzationBilling)
+
+app.listen({ port: env.SERVER_PORT }).then(() => {
+  console.log(`HTTP server running on port ${env.SERVER_PORT}!`)
 })
